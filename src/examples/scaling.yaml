@@ -26,8 +26,8 @@ nodes:
     hpa:
       min_replicas: 1
       max_replicas: 6
-      target_cpu: 60
-      cooldown_ticks: 5
+      target_cpu_pct: 60
+      stabilization_ticks: 5
     position: { x: 330, y: 170 }
 edges:
   - id: e-users-api

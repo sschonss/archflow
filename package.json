@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint . --ext .ts,.tsx",
+    "schema:gen": "tsx scripts/gen-schema.ts",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\" \"tests/**/*.ts\""
   },
   "dependencies": {
@@ -35,13 +36,17 @@
     "@typescript-eslint/eslint-plugin": "^8.12.2",
     "@typescript-eslint/parser": "^8.12.2",
     "@vitejs/plugin-react": "^4.3.3",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "eslint": "^8.57.1",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^4.6.2",
     "jsdom": "^25.0.1",
     "prettier": "^3.3.3",
+    "tsx": "^4.22.0",
     "typescript": "^5.6.3",
     "vite": "^5.4.10",
-    "vitest": "^2.1.4"
+    "vitest": "^2.1.4",
+    "zod-to-json-schema": "^3.25.2"
   }
 }

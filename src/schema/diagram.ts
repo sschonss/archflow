@@ -169,6 +169,7 @@ export const EdgeSchema = z.object({
 
 export const DiagramSchema = z
   .object({
+    $schema: z.string().url().optional(),
     version: z.literal(1),
     nodes: z.array(NodeSchema),
     edges: z.array(EdgeSchema),

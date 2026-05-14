@@ -39,4 +39,12 @@ describe("yaml helpers", () => {
     const d2 = parseDiagram(text);
     expect(d2).toEqual(d1);
   });
+
+  it("preserves a public JSON Schema URL during round-trip", () => {
+    const schemaUrl = "https://example.com/archflow/schema/archflow.schema.json";
+    const d1 = parseDiagram(`$schema: ${schemaUrl}\n${SAMPLE}`);
+
+    expect(d1.$schema).toBe(schemaUrl);
+    expect(parseDiagram(stringifyDiagram(d1))).toEqual(d1);
+  });
 });
