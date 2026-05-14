@@ -4,6 +4,7 @@ export function Inspector() {
   const selectedNodeId = useEngineStore((s) => s.selectedNodeId);
   const diagram = useEngineStore((s) => s.diagram);
   useEngineStore((s) => s.tickCount);
+  const getMetrics = useEngineStore((s) => s.getMetrics);
 
   if (!selectedNodeId || !diagram) {
     return (
@@ -22,7 +23,7 @@ export function Inspector() {
     );
   }
 
-  const metrics = useEngineStore((s) => s.getMetrics(selectedNodeId));
+  const metrics = getMetrics(selectedNodeId);
 
   return (
     <div style={{ fontSize: 11 }}>

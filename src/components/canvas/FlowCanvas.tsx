@@ -39,7 +39,7 @@ export function FlowCanvas() {
   const { nodes, edges } = useMemo<{ nodes: RFNode[]; edges: RFEdge[] }>(() => {
     if (!diagram) return { nodes: [], edges: [] };
     const nodes: RFNode[] = diagram.nodes.map((n) => {
-      let data: Record<string, unknown> = { label: n.label };
+      const data: Record<string, unknown> = { label: n.label };
       
       switch (n.type) {
         case "client":

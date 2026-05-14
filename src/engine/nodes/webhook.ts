@@ -19,10 +19,9 @@ export function tickWebhook(
   // poisson: simple Knuth algorithm per tick
   const L = Math.exp(-expected);
   let k = 0; let p = 1;
-  while (true) {
+  while (p > L) {
     k++;
     p *= ctx.rng();
-    if (p <= L) break;
   }
   const count = k - 1;
   return Array.from({ length: count }, () => ({ originType: 'webhook', bornAt: ctx.nowMs }));
