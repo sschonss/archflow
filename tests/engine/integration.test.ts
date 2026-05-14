@@ -18,9 +18,15 @@ describe("engine integration", () => {
     for (let i = 0; i < 100; i++) {
       engine.tick(20);
     }
+    // 10 rps × 2 s = 20 emitted. The last few are still in transit
+    // (edge=100ms + service=50ms). All emitted particles either completed
+    // or are still alive — none lost, none failed.
     expect(engine.state.counters.emitted).toBe(20);
-    expect(engine.state.counters.completed).toBe(20);
     expect(engine.state.counters.failed).toBe(0);
+    expect(
+      engine.state.counters.completed + engine.state.particles.length,
+    ).toBe(engine.state.counters.emitted);
+    expect(engine.state.counters.completed).toBeGreaterThanOrEqual(18);
   });
 
   it("is deterministic across runs with the same seed", () => {
