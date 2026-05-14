@@ -29,6 +29,11 @@ export interface NodeRuntime {
   emitAccumulatorMs?: number;
   // service / worker
   busyUntilMs?: number;
+  // service / worker (resources & HPA)
+  replicas?: number;
+  cpu_utilization?: number;
+  mem_utilization?: number;
+  hpaWindow?: number[];
   // worker
   workersBusy?: number;
   // gateway

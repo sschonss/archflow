@@ -23,7 +23,12 @@ export function createEngine(diagram: Diagram, seed: number): EngineApi {
 function buildInitial(diagram: Diagram, seed: number): EngineState {
   const nodes: Record<string, NodeRuntime> = {};
   for (const n of diagram.nodes) {
-    nodes[n.id] = { inFlight: 0, emitAccumulatorMs: 0 };
+    const base: NodeRuntime = { inFlight: 0, emitAccumulatorMs: 0 };
+    if (n.type === 'service' || n.type === 'worker') {
+      base.replicas = n.hpa?.min_replicas ?? 1;
+      base.hpaWindow = [];
+    }
+    nodes[n.id] = base;
   }
   return {
     diagram,
