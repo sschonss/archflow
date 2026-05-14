@@ -29,6 +29,11 @@ export function ParticleLayer() {
   const transform = useRFStore((s) => s.transform);
   const nodeMap = useRFStore((s) => s.nodeLookup) as unknown as RFNodeLookup;
 
+  const transformRef = useRef(transform);
+  const nodeMapRef = useRef(nodeMap);
+  transformRef.current = transform;
+  nodeMapRef.current = nodeMap;
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -61,10 +66,10 @@ export function ParticleLayer() {
         return;
       }
 
-      const [tx, ty, zoom] = transform;
+      const [tx, ty, zoom] = transformRef.current;
       const particles = engine.state.particles;
       for (const p of particles) {
-        const pos = particlePos(p, engine.state.diagram, nodeMap);
+        const pos = particlePos(p, engine.state.diagram, nodeMapRef.current);
         if (!pos) continue;
         const x = pos.x * zoom + tx;
         const y = pos.y * zoom + ty;
@@ -81,7 +86,7 @@ export function ParticleLayer() {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       obs.disconnect();
     };
-  }, [transform, nodeMap]);
+  }, []);
 
   return (
     <canvas
