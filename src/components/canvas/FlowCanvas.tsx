@@ -18,6 +18,7 @@ import { WorkerNode } from "./nodes/WorkerNode";
 import { QueueNode } from "./nodes/QueueNode";
 import { CacheNode } from "./nodes/CacheNode";
 import { DatabaseNode } from "./nodes/DatabaseNode";
+import { ClusterNode } from "./nodes/ClusterNode";
 import { ParticleLayer } from "./ParticleLayer";
 
 const nodeTypes = {
@@ -30,6 +31,7 @@ const nodeTypes = {
   queue: QueueNode,
   cache: CacheNode,
   database: DatabaseNode,
+  cluster: ClusterNode,
 };
 
 export function FlowCanvas() {
@@ -72,13 +74,23 @@ export function FlowCanvas() {
         case "database":
           data.pool_size = n.pool_size;
           break;
+        case "cluster":
+          break;
       }
-      
+
       return {
         id: n.id,
         type: n.type,
         position: n.position ?? { x: 0, y: 0 },
         data,
+        ...(n.type === "cluster"
+          ? {
+              style: { width: 240, height: 200 },
+              selectable: false,
+              draggable: true,
+              zIndex: -1,
+            }
+          : {}),
       };
     });
     const edges: RFEdge[] = diagram.edges.map((e) => ({
