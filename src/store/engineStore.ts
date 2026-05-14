@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Diagram } from "@/schema";
 import { createEngine, type EngineApi } from "@/engine";
+import { computeStats, type Stats } from "@/engine/metrics";
 
 interface EngineStore {
   engine: EngineApi | null;
@@ -9,6 +10,7 @@ interface EngineStore {
   isRunning: boolean;
   /** Tick used to force React re-renders without copying particles. */
   tickCount: number;
+  selectedNodeId: string | null;
 
   loadDiagram(diagram: Diagram, seed?: number): void;
   setSeed(seed: number): void;
@@ -17,6 +19,8 @@ interface EngineStore {
   reset(): void;
   /** Called by the RAF loop. */
   step(dtMs: number): void;
+  selectNode(id: string | null): void;
+  getMetrics(nodeId: string): Stats | null;
 }
 
 export const useEngineStore = create<EngineStore>((set, get) => ({
@@ -25,6 +29,7 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
   seed: 42,
   isRunning: false,
   tickCount: 0,
+  selectedNodeId: null,
 
   loadDiagram(diagram, seed) {
     const s = seed ?? get().seed;
@@ -54,5 +59,15 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
     if (!engine) return;
     engine.tick(dtMs);
     set({ tickCount: get().tickCount + 1 });
+  },
+  selectNode(id) {
+    set({ selectedNodeId: id });
+  },
+  getMetrics(nodeId) {
+    const { engine } = get();
+    if (!engine) return null;
+    const metrics = engine.state.metrics[nodeId];
+    if (!metrics) return null;
+    return computeStats(metrics, engine.state.nowMs);
   },
 }));
