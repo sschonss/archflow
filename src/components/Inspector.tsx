@@ -1,10 +1,12 @@
 import { useEngineStore } from "@/store/engineStore";
+import { Sparkline } from "./charts/Sparkline";
 
 export function Inspector() {
   const selectedNodeId = useEngineStore((s) => s.selectedNodeId);
   const diagram = useEngineStore((s) => s.diagram);
   useEngineStore((s) => s.tickCount);
   const getMetrics = useEngineStore((s) => s.getMetrics);
+  const history = useEngineStore((s) => (selectedNodeId ? s.getHistory(selectedNodeId) : null));
 
   if (!selectedNodeId || !diagram) {
     return (
@@ -24,6 +26,10 @@ export function Inspector() {
   }
 
   const metrics = getMetrics(selectedNodeId);
+  const showCharts =
+    (node.type === "service" || node.type === "worker") &&
+    history !== null &&
+    (history.rps_in.length > 0 || history.cpu.length > 0 || history.replicas.length > 0);
 
   return (
     <div style={{ fontSize: 11 }}>
@@ -92,6 +98,13 @@ export function Inspector() {
               {metrics.throughput_total}
             </div>
           </div>
+          {showCharts && (
+            <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+              <Sparkline label="rps_in" values={history.rps_in} color="#4a90e2" />
+              <Sparkline label="cpu" values={history.cpu} color="#f5a623" />
+              <Sparkline label="replicas" values={history.replicas} color="#7ed321" />
+            </div>
+          )}
         </div>
       ) : (
         <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
