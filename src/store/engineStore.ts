@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Diagram } from "@/schema";
 import { createEngine, type EngineApi } from "@/engine";
+import { parseDiagram } from "@/lib/yaml";
 import { computeStats, type Stats } from "@/engine/metrics";
 
 interface NodeHistory {
@@ -22,6 +23,12 @@ interface EngineStore {
   history: Record<string, NodeHistory>;
 
   loadDiagram(diagram: Diagram, seed?: number): void;
+  setDiagramFromYaml(text: string): { ok: true } | { ok: false; error: string };
+  updateNodePosition(id: string, position: { x: number; y: number }): void;
+  chaosKillNode(id: string): void;
+  chaosSlowNode(id: string, factor?: number): void;
+  chaosDropRequests(id: string, fraction?: number): void;
+  chaosClear(id?: string): void;
   setSeed(seed: number): void;
   play(): void;
   pause(): void;
@@ -45,6 +52,72 @@ export const useEngineStore = create<EngineStore>((set, get) => ({
   loadDiagram(diagram, seed) {
     const s = seed ?? get().seed;
     set({ diagram, engine: createEngine(diagram, s), seed: s, tickCount: 0, history: {} });
+  },
+
+  setDiagramFromYaml(text) {
+    try {
+      const diagram = parseDiagram(text);
+      get().loadDiagram(diagram);
+      return { ok: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { ok: false, error: message };
+    }
+  },
+
+  updateNodePosition(id, position) {
+    const { diagram, seed } = get();
+    if (!diagram) return;
+
+    let changed = false;
+    const nextDiagram: Diagram = {
+      ...diagram,
+      nodes: diagram.nodes.map((node) => {
+        if (node.id !== id) return node;
+        changed = true;
+        return { ...node, position };
+      }),
+    };
+    if (!changed) return;
+
+    set({ diagram: nextDiagram, engine: createEngine(nextDiagram, seed), tickCount: 0, history: {} });
+  },
+
+  chaosKillNode(id) {
+    const { engine, tickCount } = get();
+    const rt = engine?.state.nodes[id];
+    if (!rt) return;
+    rt.chaos = { ...rt.chaos, killed: true };
+    set({ tickCount: tickCount + 1 });
+  },
+
+  chaosSlowNode(id, factor = 2) {
+    const { engine, tickCount } = get();
+    const rt = engine?.state.nodes[id];
+    if (!rt) return;
+    rt.chaos = { ...rt.chaos, slow_factor: factor };
+    set({ tickCount: tickCount + 1 });
+  },
+
+  chaosDropRequests(id, fraction = 0.5) {
+    const { engine, tickCount } = get();
+    const rt = engine?.state.nodes[id];
+    if (!rt) return;
+    rt.chaos = { ...rt.chaos, drop_fraction: fraction };
+    set({ tickCount: tickCount + 1 });
+  },
+
+  chaosClear(id) {
+    const { engine, tickCount } = get();
+    if (!engine) return;
+    if (id !== undefined) {
+      const rt = engine.state.nodes[id];
+      if (!rt) return;
+      delete rt.chaos;
+    } else {
+      for (const rt of Object.values(engine.state.nodes)) delete rt.chaos;
+    }
+    set({ tickCount: tickCount + 1 });
   },
 
   setSeed(seed) {
