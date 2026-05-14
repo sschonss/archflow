@@ -48,4 +48,25 @@ describe("engine integration", () => {
     expect(engine.state.particles).toEqual([]);
     expect(engine.state.nowMs).toBe(0);
   });
+
+  it("keeps queue runtime inFlight aligned with queued depth after worker handoff", () => {
+    const diagram = {
+      version: 1 as const,
+      nodes: [
+        { type: "client" as const, id: "c", label: "C", rps: 20, pattern: "constant" as const, payload_size: 0 },
+        { type: "queue" as const, id: "q", label: "Q", max_depth: 100, on_overflow: "drop" as const },
+        { type: "worker" as const, id: "w", label: "W", concurrency: 2, latency_ms: 20, error_rate: 0 },
+      ],
+      edges: [
+        { id: "cq", source: "c", target: "q", kind: "async" as const, latency_ms: 1, weight: 1 },
+        { id: "qw", source: "q", target: "w", kind: "async" as const, latency_ms: 1, weight: 1 },
+      ],
+    };
+    const engine = createEngine(diagram, 1);
+
+    for (let i = 0; i < 50; i++) engine.tick(20);
+
+    const queueDepth = engine.state.nodes.q.queue?.length ?? 0;
+    expect(engine.state.nodes.q.inFlight).toBe(queueDepth);
+  });
 });
