@@ -4,7 +4,9 @@ import { Layout } from "./components/Layout";
 import { FlowCanvas } from "./components/canvas/FlowCanvas";
 import { Toolbar, type ViewMode } from "./components/toolbar/Toolbar";
 import { Inspector } from "./components/Inspector";
+import { PresetsPanel } from "./components/presets/PresetsPanel";
 import { useEngineStore } from "./store/engineStore";
+import { savePreset } from "./lib/presets";
 import { parseDiagram, stringifyDiagram } from "./lib/yaml";
 import demoYaml from "./examples/foundation-demo.archflow.yaml?raw";
 import ecommerceYaml from "./examples/ecommerce.archflow.yaml?raw";
@@ -71,10 +73,38 @@ export default function App() {
     [setDiagramFromYaml],
   );
 
+  const handleLoadPreset = useCallback(
+    (yaml: string) => {
+      const result = setDiagramFromYaml(yaml);
+      if (result.ok) {
+        setEditorText(yaml);
+        setEditorError(null);
+      } else {
+        setEditorError(result.error);
+      }
+    },
+    [setDiagramFromYaml],
+  );
+
+  const handleSaveCurrent = useCallback(
+    (name: string) => {
+      if (!diagram) return;
+      savePreset(name, stringifyDiagram(diagram));
+    },
+    [diagram],
+  );
+
   return (
     <ReactFlowProvider>
       <Layout
-        left={<PaletteStub example={example} onExampleChange={setExample} />}
+        left={
+          <LeftPanel
+            example={example}
+            onExampleChange={setExample}
+            onLoadPreset={handleLoadPreset}
+            onSaveCurrent={handleSaveCurrent}
+          />
+        }
         center={
           <div style={{ display: "flex", width: "100%", height: "100%", minHeight: 0 }}>
             <div
@@ -102,41 +132,56 @@ export default function App() {
   );
 }
 
-function PaletteStub({
+function LeftPanel({
   example,
   onExampleChange,
+  onLoadPreset,
+  onSaveCurrent,
 }: {
   example: ExampleName;
   onExampleChange: (ex: ExampleName) => void;
+  onLoadPreset: (yaml: string) => void;
+  onSaveCurrent: (name: string) => void;
 }) {
   return (
     <>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ textTransform: "uppercase", color: "var(--text-dim)", fontSize: 11, marginBottom: 6 }}>
-          Example
-        </div>
+      <section style={{ marginBottom: 16 }}>
+        <div style={sectionTitleStyle}>Examples</div>
         <select
           value={example}
           onChange={(e) => onExampleChange(e.target.value as ExampleName)}
-          style={{
-            width: "100%",
-            padding: "6px 8px",
-            fontSize: 12,
-            backgroundColor: "var(--bg-secondary)",
-            color: "var(--text)",
-            border: "1px solid var(--border)",
-            borderRadius: 4,
-          }}
+          style={selectStyle}
         >
           <option value="foundation">Foundation Demo</option>
           <option value="ecommerce">E-commerce Catalog</option>
           <option value="scaling">Scaling HPA Demo</option>
         </select>
-      </div>
-      <div style={{ textTransform: "uppercase", color: "var(--text-dim)", fontSize: 11 }}>
-        Palette
-      </div>
-      <p style={{ color: "var(--text-dim)" }}>Palette comes in Plan 2.</p>
+      </section>
+      <section style={{ marginBottom: 16 }}>
+        <div style={sectionTitleStyle}>My Presets</div>
+        <PresetsPanel onLoad={onLoadPreset} onSaveCurrent={onSaveCurrent} />
+      </section>
+      <section>
+        <div style={sectionTitleStyle}>Palette</div>
+        <p style={{ color: "var(--text-dim)" }}>Palette comes in Plan 2.</p>
+      </section>
     </>
   );
 }
+
+const sectionTitleStyle: React.CSSProperties = {
+  textTransform: "uppercase",
+  color: "var(--text-dim)",
+  fontSize: 11,
+  marginBottom: 6,
+};
+
+const selectStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "6px 8px",
+  fontSize: 12,
+  backgroundColor: "var(--bg-secondary)",
+  color: "var(--text)",
+  border: "1px solid var(--border)",
+  borderRadius: 4,
+};
