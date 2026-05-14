@@ -1,12 +1,36 @@
 import { useEngineStore } from "@/store/engineStore";
 import { Sparkline } from "./charts/Sparkline";
 
+const buttonStyle: React.CSSProperties = {
+  padding: "3px 7px",
+  background: "var(--panel)",
+  color: "var(--text)",
+  border: "1px solid var(--border)",
+  borderRadius: 4,
+  fontSize: 10,
+};
+
+const chaosBadgeStyle: React.CSSProperties = {
+  padding: "1px 6px",
+  borderRadius: 999,
+  background: "rgba(255, 80, 80, 0.16)",
+  border: "1px solid rgba(255, 80, 80, 0.5)",
+  color: "#ff8a8a",
+  fontSize: 9,
+  fontWeight: 600,
+};
+
 export function Inspector() {
   const selectedNodeId = useEngineStore((s) => s.selectedNodeId);
   const diagram = useEngineStore((s) => s.diagram);
+  const engine = useEngineStore((s) => s.engine);
   useEngineStore((s) => s.tickCount);
   const getMetrics = useEngineStore((s) => s.getMetrics);
   const history = useEngineStore((s) => (selectedNodeId ? s.getHistory(selectedNodeId) : null));
+  const chaosKillNode = useEngineStore((s) => s.chaosKillNode);
+  const chaosSlowNode = useEngineStore((s) => s.chaosSlowNode);
+  const chaosDropRequests = useEngineStore((s) => s.chaosDropRequests);
+  const chaosClear = useEngineStore((s) => s.chaosClear);
 
   if (!selectedNodeId || !diagram) {
     return (
@@ -26,6 +50,10 @@ export function Inspector() {
   }
 
   const metrics = getMetrics(selectedNodeId);
+  const runtime = engine?.state.nodes[selectedNodeId];
+  const chaos = runtime?.chaos;
+  const isChaosActive = Boolean(chaos?.killed || chaos?.slow_factor || chaos?.drop_fraction);
+  const supportsChaos = ["service", "worker", "gateway", "database", "cache", "queue"].includes(node.type);
   const showCharts =
     (node.type === "service" || node.type === "worker") &&
     history !== null &&
@@ -33,8 +61,11 @@ export function Inspector() {
 
   return (
     <div style={{ fontSize: 11 }}>
-      <h3 style={{ margin: "0 0 8px 0", fontSize: 13 }}>
-        {node.label} <small style={{ color: "var(--text-dim)" }}>({node.type})</small>
+      <h3 style={{ margin: "0 0 8px 0", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+        <span>
+          {node.label} <small style={{ color: "var(--text-dim)" }}>({node.type})</small>
+        </span>
+        {isChaosActive ? <span style={chaosBadgeStyle}>Chaos active</span> : null}
       </h3>
 
       <div style={{ marginBottom: 12 }}>
@@ -58,6 +89,33 @@ export function Inspector() {
           {JSON.stringify(node, null, 2)}
         </pre>
       </div>
+
+      {supportsChaos ? (
+        <section style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 10, color: "var(--text-dim)", marginBottom: 6 }}>
+            Chaos
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            <button type="button" onClick={() => chaosKillNode(selectedNodeId)} disabled={Boolean(chaos?.killed)} style={buttonStyle}>
+              Kill
+            </button>
+            <button type="button" onClick={() => chaosSlowNode(selectedNodeId, 2)} disabled={Boolean(chaos?.slow_factor)} style={buttonStyle}>
+              Slow x2
+            </button>
+            <button
+              type="button"
+              onClick={() => chaosDropRequests(selectedNodeId, 0.5)}
+              disabled={Boolean(chaos?.drop_fraction)}
+              style={buttonStyle}
+            >
+              Drop 50%
+            </button>
+            <button type="button" onClick={() => chaosClear(selectedNodeId)} disabled={!isChaosActive} style={buttonStyle}>
+              Clear
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {metrics ? (
         <div>
