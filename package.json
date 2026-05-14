@@ -15,7 +15,9 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\" \"tests/**/*.ts\""
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "@xyflow/react": "^12.3.5",
+    "monaco-editor": "^0.55.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "uplot": "^1.6.32",
