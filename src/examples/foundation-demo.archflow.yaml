@@ -1,0 +1,23 @@
+# archflow Foundation demo — single Client emitting 5 rps to a single Service.
+# Edge has 100 ms simulated network latency; Service processes in 50 ms.
+version: 1
+nodes:
+  - type: client
+    id: client-mobile
+    label: Mobile App
+    rps: 5
+    pattern: constant
+    position: { x: 80, y: 200 }
+  - type: service
+    id: orders-svc
+    label: orders-svc
+    latency_ms: 50
+    capacity_rps: 200
+    error_rate: 0
+    position: { x: 420, y: 200 }
+edges:
+  - id: e-client-orders
+    source: client-mobile
+    target: orders-svc
+    kind: sync
+    latency_ms: 100
