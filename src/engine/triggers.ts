@@ -1,3 +1,6 @@
+import type { Diagram } from '@/schema/diagram';
+import type { EngineState } from './types';
+
 // Minimal cron: only the first (minute) field is interpreted.
 // Supported: '*', 'N', '*/N'. Other fields ignored. Sim-time only (ms).
 export interface Cron {
@@ -27,4 +30,32 @@ export function nextFire(c: Cron, fromMs: number): number {
     return fromMs - within + (within < target ? target : hour + target);
   }
   return fromMs + minute;
+}
+
+export function tickTriggers(state: EngineState, diag: Diagram): void {
+  for (const node of diag.nodes) {
+    if (node.type !== 'service' && node.type !== 'worker') continue;
+    if (!node.triggers || node.triggers.length === 0) continue;
+    const rt = state.nodes[node.id];
+    if (!rt) continue;
+    rt.cronNextMs ??= {};
+
+    for (const trigger of node.triggers) {
+      const cron = parseCron(trigger.cron);
+      const next = rt.cronNextMs[trigger.id] ?? nextFire(cron, state.nowMs - 1);
+      if (state.nowMs >= next) {
+        state.particles.push({
+          id: state.nextParticleId++,
+          originType: 'cron',
+          bornAt: state.nowMs,
+          location: { kind: 'node', id: node.id },
+          status: 'processing',
+        });
+        state.counters.emitted += 1;
+        rt.cronNextMs[trigger.id] = nextFire(cron, state.nowMs);
+      } else {
+        rt.cronNextMs[trigger.id] = next;
+      }
+    }
+  }
 }

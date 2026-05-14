@@ -12,6 +12,7 @@ import { cacheLookup } from "./nodes/cache";
 import { acquireConn, expireWaiters, releaseConn } from "./nodes/database";
 import { chooseEdge } from "./routing";
 import { emptyWindow, recordComplete, recordEmit, recordFail, recordQueueDepth } from "./metrics";
+import { tickTriggers } from "./triggers";
 
 interface TimedJob {
   nodeId: string;
@@ -39,6 +40,7 @@ export function tick(state: EngineState, dtMs: number): void {
 
   state.nowMs += dtMs;
   cleanupEphemeralState(state);
+  tickTriggers(state, state.diagram);
 
   advanceEdges(state, dtMs);
 
