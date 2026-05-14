@@ -109,6 +109,7 @@ export function FlowCanvas() {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        colorMode="dark"
         proOptions={{ hideAttribution: true }}
         fitView
         onNodeClick={(_e, n) => selectNode(n.id)}
