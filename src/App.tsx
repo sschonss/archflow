@@ -45,13 +45,29 @@ type ExampleName = keyof typeof yamlByExample;
 
 const viewModes: ViewMode[] = ["canvas", "split", "editor"];
 
+function isExampleName(value: string | null): value is ExampleName {
+  return value !== null && Object.prototype.hasOwnProperty.call(yamlByExample, value);
+}
+
+function initialExample(): ExampleName {
+  const requested = new URLSearchParams(window.location.search).get("example");
+  return isExampleName(requested) ? requested : "foundation";
+}
+
+function updateExampleQueryParam(name: ExampleName) {
+  const params = new URLSearchParams(window.location.search);
+  params.set("example", name);
+  const search = params.toString();
+  history.replaceState(null, "", `${window.location.pathname}?${search}${window.location.hash}`);
+}
+
 function initialViewMode(): ViewMode {
   const saved = localStorage.getItem("archflow.viewMode");
   return viewModes.includes(saved as ViewMode) ? (saved as ViewMode) : "canvas";
 }
 
 export default function App() {
-  const [example, setExample] = useState<ExampleName>("foundation");
+  const [example, setExample] = useState<ExampleName>(initialExample);
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [editorText, setEditorText] = useState("");
@@ -108,6 +124,11 @@ export default function App() {
     [setDiagramFromYaml],
   );
 
+  const handleExampleChange = useCallback((name: ExampleName) => {
+    updateExampleQueryParam(name);
+    setExample(name);
+  }, []);
+
   const handleSaveCurrent = useCallback(
     (name: string) => {
       if (!diagram) return;
@@ -122,7 +143,7 @@ export default function App() {
         left={
           <LeftPanel
             example={example}
-            onExampleChange={setExample}
+            onExampleChange={handleExampleChange}
             onLoadPreset={handleLoadPreset}
             onSaveCurrent={handleSaveCurrent}
           />
