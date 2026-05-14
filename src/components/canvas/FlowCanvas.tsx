@@ -37,6 +37,7 @@ const nodeTypes = {
 export function FlowCanvas() {
   const diagram = useEngineStore((s) => s.diagram);
   const selectNode = useEngineStore((s) => s.selectNode);
+  const updateNodePosition = useEngineStore((s) => s.updateNodePosition);
 
   const { nodes, edges } = useMemo<{ nodes: RFNode[]; edges: RFEdge[] }>(() => {
     if (!diagram) return { nodes: [], edges: [] };
@@ -111,6 +112,7 @@ export function FlowCanvas() {
         proOptions={{ hideAttribution: true }}
         fitView
         onNodeClick={(_e, n) => selectNode(n.id)}
+        onNodeDragStop={(_e, node) => updateNodePosition(node.id, node.position)}
       >
         <Background gap={20} color="var(--border)" />
         <Controls />
