@@ -1,0 +1,156 @@
+# archflow E-commerce demo — full catalog showcasing all 9 node types + 2 scenarios + cron trigger
+version: 1
+nodes:
+  - type: client
+    id: web
+    label: Web Users
+    rps: 30
+    pattern: constant
+    position: { x: 80, y: 100 }
+  - type: webhook
+    id: hook
+    label: Stripe Hook
+    rps: 2
+    pattern: poisson
+    position: { x: 80, y: 250 }
+  - type: gateway
+    id: gw
+    label: API Gateway
+    rate_limit_rps: 100
+    auth_check_ms: 2
+    position: { x: 280, y: 175 }
+  - type: load_balancer
+    id: lb
+    label: LB
+    strategy: round_robin
+    position: { x: 480, y: 175 }
+  - type: service
+    id: api1
+    label: API 1
+    latency_ms: 30
+    capacity_rps: 60
+    error_rate: 0.01
+    position: { x: 680, y: 80 }
+  - type: service
+    id: api2
+    label: API 2
+    latency_ms: 30
+    capacity_rps: 60
+    error_rate: 0.01
+    position: { x: 680, y: 270 }
+  - type: cache
+    id: cache
+    label: Redis
+    hit_rate: 0.7
+    latency_ms: 1
+    position: { x: 880, y: 100 }
+  - type: database
+    id: db
+    label: Postgres
+    pool_size: 20
+    query_latency_ms: 5
+    timeout_ms: 200
+    position: { x: 880, y: 350 }
+  - type: queue
+    id: q
+    label: Orders Q
+    max_depth: 500
+    on_overflow: drop
+    position: { x: 880, y: 200 }
+  - type: worker
+    id: wkr
+    label: Order Worker
+    concurrency: 4
+    latency_ms: 80
+    error_rate: 0
+    triggers:
+      - id: nightly
+        cron: "0 * * * *"
+    position: { x: 1080, y: 200 }
+edges:
+  - id: e_web_gw
+    source: web
+    target: gw
+    kind: sync
+    latency_ms: 5
+    weight: 1
+  - id: e_hook_gw
+    source: hook
+    target: gw
+    kind: sync
+    latency_ms: 5
+    weight: 1
+  - id: e_gw_lb
+    source: gw
+    target: lb
+    kind: sync
+    latency_ms: 1
+    weight: 1
+  - id: e_lb_api1
+    source: lb
+    target: api1
+    kind: sync
+    latency_ms: 1
+    weight: 1
+  - id: e_lb_api2
+    source: lb
+    target: api2
+    kind: sync
+    latency_ms: 1
+    weight: 1
+  - id: e_api1_cache
+    source: api1
+    target: cache
+    kind: sync
+    latency_ms: 1
+    weight: 1
+    tags: [scenario:browse]
+  - id: e_api2_cache
+    source: api2
+    target: cache
+    kind: sync
+    latency_ms: 1
+    weight: 1
+    tags: [scenario:browse]
+  - id: e_api1_q
+    source: api1
+    target: q
+    kind: async
+    latency_ms: 1
+    weight: 1
+    tags: [scenario:checkout]
+  - id: e_api2_q
+    source: api2
+    target: q
+    kind: async
+    latency_ms: 1
+    weight: 1
+    tags: [scenario:checkout]
+  - id: e_cache_db
+    source: cache
+    target: db
+    kind: sync
+    latency_ms: 1
+    weight: 1
+    tags: ["tag:miss"]
+  - id: e_q_wkr
+    source: q
+    target: wkr
+    kind: async
+    latency_ms: 1
+    weight: 1
+  - id: e_wkr_db
+    source: wkr
+    target: db
+    kind: sync
+    latency_ms: 5
+    weight: 1
+scenarios:
+  - id: browse
+    origin: web
+    color: "#4CAF50"
+    weight: 3
+  - id: checkout
+    origin: web
+    color: "#FF9800"
+    weight: 1
