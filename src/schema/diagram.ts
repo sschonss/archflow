@@ -26,6 +26,26 @@ export const ClientNodeSchema = z.object({
   position: z.object({ x: z.number(), y: z.number() }).optional(),
 });
 
+export const ResourcesSchema = z.object({
+  cpu_per_request_ms: z.number().positive(),
+  mem_per_request_mb: z.number().positive(),
+  cpu_limit_ms_per_sec: z.number().positive(),
+  mem_limit_mb: z.number().positive(),
+});
+export type Resources = z.infer<typeof ResourcesSchema>;
+
+export const HpaSchema = z
+  .object({
+    min_replicas: z.number().int().positive(),
+    max_replicas: z.number().int().positive(),
+    target_cpu_pct: z.number().min(1).max(100),
+    stabilization_ticks: z.number().int().positive().default(5),
+  })
+  .refine((h) => h.min_replicas <= h.max_replicas, {
+    message: 'min_replicas must be <= max_replicas',
+  });
+export type Hpa = z.infer<typeof HpaSchema>;
+
 export const ServiceNodeSchema = z.object({
   type: z.literal("service"),
   id: z.string().min(1),
@@ -34,6 +54,8 @@ export const ServiceNodeSchema = z.object({
   capacity_rps: z.number().positive().default(1000),
   error_rate: z.number().min(0).max(1).default(0),
   triggers: z.array(TriggerSchema).optional(),
+  resources: ResourcesSchema.optional(),
+  hpa: HpaSchema.optional(),
   position: z.object({ x: z.number(), y: z.number() }).optional(),
 });
 
@@ -71,6 +93,8 @@ export const WorkerSchema = z.object({
   latency_ms: z.number().nonnegative(),
   error_rate: z.number().min(0).max(1),
   triggers: z.array(TriggerSchema).optional(),
+  resources: ResourcesSchema.optional(),
+  hpa: HpaSchema.optional(),
   position: z.object({ x: z.number(), y: z.number() }).optional(),
 });
 
@@ -102,6 +126,14 @@ export const DatabaseSchema = z.object({
   position: z.object({ x: z.number(), y: z.number() }).optional(),
 });
 
+export const ClusterSchema = z.object({
+  type: z.literal("cluster"),
+  id: z.string().min(1),
+  label: z.string().default("Cluster"),
+  members: z.array(z.string()).default([]),
+  position: z.object({ x: z.number(), y: z.number() }).optional(),
+});
+
 export const NodeSchema = z.discriminatedUnion("type", [
   ClientNodeSchema,
   WebhookSchema,
@@ -112,6 +144,7 @@ export const NodeSchema = z.discriminatedUnion("type", [
   QueueSchema,
   CacheSchema,
   DatabaseSchema,
+  ClusterSchema,
 ]);
 
 export const EdgeSchema = z.object({
@@ -161,6 +194,7 @@ export type WorkerNode = z.infer<typeof WorkerSchema>;
 export type QueueNode = z.infer<typeof QueueSchema>;
 export type CacheNode = z.infer<typeof CacheSchema>;
 export type DatabaseNode = z.infer<typeof DatabaseSchema>;
+export type ClusterNode = z.infer<typeof ClusterSchema>;
 export type Node = z.infer<typeof NodeSchema>;
 export type Edge = z.infer<typeof EdgeSchema>;
 export type Diagram = z.infer<typeof DiagramSchema>;
