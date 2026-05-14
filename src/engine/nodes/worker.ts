@@ -2,7 +2,7 @@ import type { Node } from '@/schema/diagram';
 import type { NodeRuntime } from '../types';
 
 export function canPick(node: Extract<Node, { type: 'worker' }>, rt: NodeRuntime): boolean {
-  return (rt.workersBusy ?? 0) < node.concurrency;
+  return (rt.workersBusy ?? 0) < node.concurrency * (rt.replicas ?? 1);
 }
 export function startProcessing(_node: Extract<Node, { type: 'worker' }>, rt: NodeRuntime): void {
   rt.workersBusy = (rt.workersBusy ?? 0) + 1;

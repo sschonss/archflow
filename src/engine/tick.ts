@@ -13,6 +13,8 @@ import { acquireConn, expireWaiters, releaseConn } from "./nodes/database";
 import { chooseEdge } from "./routing";
 import { emptyWindow, recordComplete, recordEmit, recordFail, recordQueueDepth } from "./metrics";
 import { tickTriggers } from "./triggers";
+import { applyOom, computeUtilization } from "./resources";
+import { tickHpa } from "./hpa";
 
 interface TimedJob {
   nodeId: string;
@@ -46,6 +48,7 @@ export function tick(state: EngineState, dtMs: number): void {
 
   for (const node of state.diagram.nodes) {
     dispatchNode(state, node, dtMs, tickRng);
+    updateScalableRuntime(state, node, dtMs);
   }
 
   emitFromOrigins(state, dtMs, tickRng);
@@ -111,6 +114,24 @@ function dispatchNode(
     default:
       void dtMs;
   }
+}
+
+function updateScalableRuntime(state: EngineState, node: Node, dtMs: number): void {
+  if (node.type !== "service" && node.type !== "worker") return;
+  const rt = state.nodes[node.id];
+  if (!rt) return;
+
+  const utilization = computeUtilization(rt, node, dtMs);
+  rt.cpu_utilization = utilization.cpu;
+  rt.mem_utilization = utilization.mem;
+
+  rt.hpaWindow ??= [];
+  rt.hpaWindow.push(utilization.cpu);
+  const windowLimit = node.hpa?.stabilization_ticks ?? 5;
+  while (rt.hpaWindow.length > windowLimit) rt.hpaWindow.shift();
+
+  applyOom(state, node, rt);
+  tickHpa(node, rt);
 }
 
 function emitFromOrigins(state: EngineState, dtMs: number, rng: () => number): void {
