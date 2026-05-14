@@ -1,0 +1,78 @@
+$schema: "https://example.com/archflow/schema/archflow.schema.json"
+version: 1
+nodes:
+  - type: cluster
+    id: prod-cluster
+    label: Production Kubernetes
+    members: [frontend, api-service]
+    position: { x: 390, y: 70 }
+  - type: client
+    id: burst-client
+    label: Burst Traffic Client
+    rps: 360
+    pattern: burst
+    payload_size: 2
+    position: { x: 80, y: 210 }
+  - type: gateway
+    id: ingress
+    label: Ingress Gateway
+    rate_limit_rps: 500
+    auth_check_ms: 2
+    position: { x: 310, y: 210 }
+  - type: service
+    id: frontend
+    label: Frontend Service
+    latency_ms: 20
+    capacity_rps: 180
+    error_rate: 0.002
+    position: { x: 540, y: 170 }
+  - type: service
+    id: api-service
+    label: API Service with HPA
+    latency_ms: 50
+    capacity_rps: 80
+    error_rate: 0.006
+    resources:
+      cpu_per_request_ms: 55
+      mem_per_request_mb: 3
+      cpu_limit_ms_per_sec: 1000
+      mem_limit_mb: 512
+    hpa:
+      min_replicas: 1
+      max_replicas: 10
+      target_cpu_pct: 60
+      stabilization_ticks: 5
+    position: { x: 780, y: 210 }
+  - type: database
+    id: state-db
+    label: State Database
+    pool_size: 25
+    query_latency_ms: 16
+    timeout_ms: 250
+    position: { x: 1020, y: 210 }
+edges:
+  - id: client-to-ingress
+    source: burst-client
+    target: ingress
+    kind: sync
+    latency_ms: 7
+  - id: ingress-to-frontend
+    source: ingress
+    target: frontend
+    kind: sync
+    latency_ms: 3
+  - id: frontend-to-api
+    source: frontend
+    target: api-service
+    kind: sync
+    latency_ms: 4
+  - id: api-to-db
+    source: api-service
+    target: state-db
+    kind: sync
+    latency_ms: 12
+scenarios:
+  - id: burst-scaleout
+    origin: burst-client
+    color: "#f59e0b"
+    weight: 1

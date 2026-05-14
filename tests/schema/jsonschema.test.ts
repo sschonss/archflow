@@ -10,6 +10,11 @@ const exampleFiles = [
   "foundation-demo.archflow.yaml",
   "ecommerce.archflow.yaml",
   "scaling.yaml",
+  "01-ecommerce.yaml",
+  "02-microservices-async.yaml",
+  "03-api-gateway.yaml",
+  "04-k8s-autoscaling.yaml",
+  "05-event-driven.yaml",
 ];
 
 describe("generated JSON Schema", () => {

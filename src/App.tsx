@@ -11,10 +11,37 @@ import { parseDiagram, stringifyDiagram } from "./lib/yaml";
 import demoYaml from "./examples/foundation-demo.archflow.yaml?raw";
 import ecommerceYaml from "./examples/ecommerce.archflow.yaml?raw";
 import scalingYaml from "./examples/scaling.yaml?raw";
+import cookbookEcommerceYaml from "./examples/01-ecommerce.yaml?raw";
+import microservicesAsyncYaml from "./examples/02-microservices-async.yaml?raw";
+import apiGatewayYaml from "./examples/03-api-gateway.yaml?raw";
+import k8sAutoscalingYaml from "./examples/04-k8s-autoscaling.yaml?raw";
+import eventDrivenYaml from "./examples/05-event-driven.yaml?raw";
 
 const YamlEditor = lazy(() => import("./components/editor/YamlEditor"));
 
-type ExampleName = "foundation" | "ecommerce" | "scaling";
+const yamlByExample = {
+  foundation: demoYaml,
+  ecommerce: ecommerceYaml,
+  scaling: scalingYaml,
+  "01-ecommerce": cookbookEcommerceYaml,
+  "02-microservices-async": microservicesAsyncYaml,
+  "03-api-gateway": apiGatewayYaml,
+  "04-k8s-autoscaling": k8sAutoscalingYaml,
+  "05-event-driven": eventDrivenYaml,
+};
+
+const exampleOptions = [
+  { value: "foundation", label: "Foundation Demo" },
+  { value: "ecommerce", label: "E-commerce Catalog" },
+  { value: "scaling", label: "Scaling HPA Demo" },
+  { value: "01-ecommerce", label: "01 E-commerce" },
+  { value: "02-microservices-async", label: "02 Microservices Async" },
+  { value: "03-api-gateway", label: "03 API Gateway" },
+  { value: "04-k8s-autoscaling", label: "04 K8s Autoscaling" },
+  { value: "05-event-driven", label: "05 Event Driven" },
+] as const;
+
+type ExampleName = keyof typeof yamlByExample;
 
 const viewModes: ViewMode[] = ["canvas", "split", "editor"];
 
@@ -34,11 +61,6 @@ export default function App() {
   const setDiagramFromYaml = useEngineStore((s) => s.setDiagramFromYaml);
 
   useEffect(() => {
-    const yamlByExample: Record<ExampleName, string> = {
-      foundation: demoYaml,
-      ecommerce: ecommerceYaml,
-      scaling: scalingYaml,
-    };
     loadDiagram(parseDiagram(yamlByExample[example]));
     setEditorError(null);
   }, [loadDiagram, example]);
@@ -152,9 +174,11 @@ function LeftPanel({
           onChange={(e) => onExampleChange(e.target.value as ExampleName)}
           style={selectStyle}
         >
-          <option value="foundation">Foundation Demo</option>
-          <option value="ecommerce">E-commerce Catalog</option>
-          <option value="scaling">Scaling HPA Demo</option>
+          {exampleOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
       </section>
       <section style={{ marginBottom: 16 }}>

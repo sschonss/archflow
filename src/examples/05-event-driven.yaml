@@ -1,0 +1,103 @@
+$schema: "https://example.com/archflow/schema/archflow.schema.json"
+version: 1
+nodes:
+  - type: webhook
+    id: partner-webhook
+    label: Partner Webhook
+    rps: 65
+    pattern: poisson
+    position: { x: 60, y: 160 }
+  - type: service
+    id: webhook-ingestor
+    label: Webhook Ingestor
+    latency_ms: 22
+    capacity_rps: 140
+    error_rate: 0.004
+    triggers:
+      - id: nightly-batch
+        cron: "30 2 * * *"
+        payload_size: 3
+    position: { x: 280, y: 160 }
+  - type: queue
+    id: event-bus
+    label: Event Queue
+    max_depth: 1200
+    on_overflow: dlq
+    position: { x: 500, y: 160 }
+  - type: worker
+    id: projection-worker
+    label: Projection Worker Fan-out
+    concurrency: 8
+    latency_ms: 90
+    error_rate: 0.008
+    position: { x: 740, y: 100 }
+  - type: worker
+    id: cache-invalidator
+    label: Cache Invalidation Worker
+    concurrency: 3
+    latency_ms: 45
+    error_rate: 0.004
+    position: { x: 740, y: 250 }
+  - type: cache
+    id: read-cache
+    label: Read Model Cache
+    hit_rate: 0.88
+    latency_ms: 2
+    position: { x: 980, y: 250 }
+  - type: database
+    id: event-store
+    label: Event Store DB
+    pool_size: 28
+    query_latency_ms: 20
+    timeout_ms: 300
+    position: { x: 980, y: 100 }
+edges:
+  - id: webhook-to-ingestor
+    source: partner-webhook
+    target: webhook-ingestor
+    kind: sync
+    latency_ms: 5
+  - id: ingestor-to-queue
+    source: webhook-ingestor
+    target: event-bus
+    kind: async
+    latency_ms: 3
+  - id: queue-to-projections
+    source: event-bus
+    target: projection-worker
+    kind: async
+    latency_ms: 2
+    weight: 3
+    tags: [scenario:projection]
+  - id: queue-to-cache-invalidator
+    source: event-bus
+    target: cache-invalidator
+    kind: async
+    latency_ms: 2
+    weight: 1
+    tags: [scenario:invalidation]
+  - id: projections-to-db
+    source: projection-worker
+    target: event-store
+    kind: sync
+    latency_ms: 14
+  - id: invalidator-to-cache
+    source: cache-invalidator
+    target: read-cache
+    kind: sync
+    latency_ms: 2
+  - id: cache-to-event-store
+    source: read-cache
+    target: event-store
+    kind: sync
+    latency_ms: 12
+    tags: [tag:miss]
+scenarios:
+  - id: projection
+    origin: partner-webhook
+    color: "#14b8a6"
+    weight: 3
+  - id: invalidation
+    origin: partner-webhook
+    color: "#e879f9"
+    weight: 1

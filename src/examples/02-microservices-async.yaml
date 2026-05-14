@@ -1,0 +1,63 @@
+$schema: "https://example.com/archflow/schema/archflow.schema.json"
+version: 1
+nodes:
+  - type: client
+    id: event-clients
+    label: Event Clients
+    rps: 420
+    pattern: burst
+    payload_size: 1
+    position: { x: 60, y: 180 }
+  - type: service
+    id: producer-api
+    label: Producer Service
+    latency_ms: 18
+    capacity_rps: 220
+    error_rate: 0.005
+    position: { x: 280, y: 180 }
+  - type: queue
+    id: jobs-queue
+    label: Jobs Queue
+    max_depth: 800
+    on_overflow: dlq
+    position: { x: 520, y: 180 }
+  - type: worker
+    id: worker-pool
+    label: Worker Pool x4
+    concurrency: 4
+    latency_ms: 180
+    error_rate: 0.01
+    position: { x: 760, y: 180 }
+  - type: database
+    id: events-db
+    label: Events DB
+    pool_size: 18
+    query_latency_ms: 18
+    timeout_ms: 300
+    position: { x: 1000, y: 180 }
+edges:
+  - id: clients-to-producer
+    source: event-clients
+    target: producer-api
+    kind: sync
+    latency_ms: 6
+  - id: producer-to-queue
+    source: producer-api
+    target: jobs-queue
+    kind: async
+    latency_ms: 3
+  - id: queue-to-workers
+    source: jobs-queue
+    target: worker-pool
+    kind: async
+    latency_ms: 2
+  - id: workers-to-db
+    source: worker-pool
+    target: events-db
+    kind: sync
+    latency_ms: 12
+scenarios:
+  - id: backpressure
+    origin: event-clients
+    color: "#ef4444"
+    weight: 1

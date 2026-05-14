@@ -1,0 +1,150 @@
+$schema: "https://example.com/archflow/schema/archflow.schema.json"
+version: 1
+nodes:
+  - type: client
+    id: shoppers
+    label: Web + Mobile Shoppers
+    rps: 80
+    pattern: constant
+    payload_size: 4
+    position: { x: 60, y: 150 }
+  - type: gateway
+    id: edge-gateway
+    label: Edge API Gateway
+    rate_limit_rps: 250
+    auth_check_ms: 3
+    position: { x: 260, y: 150 }
+  - type: load_balancer
+    id: app-lb
+    label: App Load Balancer
+    strategy: least_conn
+    position: { x: 460, y: 150 }
+  - type: service
+    id: catalog-api
+    label: Catalog API
+    latency_ms: 25
+    capacity_rps: 120
+    error_rate: 0.005
+    position: { x: 680, y: 60 }
+  - type: service
+    id: cart-api
+    label: Cart API
+    latency_ms: 35
+    capacity_rps: 90
+    error_rate: 0.01
+    position: { x: 680, y: 180 }
+  - type: service
+    id: payment-api
+    label: Payment API
+    latency_ms: 80
+    capacity_rps: 45
+    error_rate: 0.02
+    position: { x: 680, y: 320 }
+  - type: cache
+    id: product-cache
+    label: Product Cache
+    hit_rate: 0.82
+    latency_ms: 2
+    position: { x: 910, y: 60 }
+  - type: database
+    id: commerce-db
+    label: Commerce Postgres
+    pool_size: 35
+    query_latency_ms: 12
+    timeout_ms: 250
+    position: { x: 1130, y: 180 }
+  - type: queue
+    id: fulfillment-queue
+    label: Fulfillment Queue
+    max_depth: 1500
+    on_overflow: dlq
+    position: { x: 910, y: 320 }
+  - type: worker
+    id: fulfillment-worker
+    label: Fulfillment Worker Pool
+    concurrency: 6
+    latency_ms: 140
+    error_rate: 0.01
+    triggers:
+      - id: hourly-reconcile
+        cron: "0 * * * *"
+        payload_size: 2
+    position: { x: 1130, y: 320 }
+edges:
+  - id: shoppers-to-gateway
+    source: shoppers
+    target: edge-gateway
+    kind: sync
+    latency_ms: 8
+  - id: gateway-to-lb
+    source: edge-gateway
+    target: app-lb
+    kind: sync
+    latency_ms: 2
+  - id: lb-to-catalog
+    source: app-lb
+    target: catalog-api
+    kind: sync
+    latency_ms: 3
+    weight: 3
+    tags: [scenario:browse]
+  - id: lb-to-cart
+    source: app-lb
+    target: cart-api
+    kind: sync
+    latency_ms: 4
+    weight: 2
+    tags: [scenario:cart]
+  - id: lb-to-payment
+    source: app-lb
+    target: payment-api
+    kind: sync
+    latency_ms: 6
+    weight: 1
+    tags: [scenario:checkout]
+  - id: catalog-to-cache
+    source: catalog-api
+    target: product-cache
+    kind: sync
+    latency_ms: 1
+    tags: [tag:hit, scenario:browse]
+  - id: catalog-to-db
+    source: catalog-api
+    target: commerce-db
+    kind: sync
+    latency_ms: 10
+    tags: [tag:miss]
+  - id: cart-to-db
+    source: cart-api
+    target: commerce-db
+    kind: sync
+    latency_ms: 10
+  - id: payment-to-gateway
+    source: payment-api
+    target: fulfillment-queue
+    kind: async
+    latency_ms: 4
+    tags: [scenario:checkout]
+  - id: queue-to-worker
+    source: fulfillment-queue
+    target: fulfillment-worker
+    kind: async
+    latency_ms: 2
+  - id: worker-to-db
+    source: fulfillment-worker
+    target: commerce-db
+    kind: sync
+    latency_ms: 12
+scenarios:
+  - id: browse
+    origin: shoppers
+    color: "#2dd4bf"
+    weight: 4
+  - id: cart
+    origin: shoppers
+    color: "#60a5fa"
+    weight: 2
+  - id: checkout
+    origin: shoppers
+    color: "#f97316"
+    weight: 1

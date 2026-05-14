@@ -1,0 +1,124 @@
+$schema: "https://example.com/archflow/schema/archflow.schema.json"
+version: 1
+nodes:
+  - type: client
+    id: public-users
+    label: Public Users
+    rps: 180
+    pattern: constant
+    payload_size: 2
+    position: { x: 60, y: 190 }
+  - type: gateway
+    id: api-gateway
+    label: Rate-limit + JWT Gateway
+    rate_limit_rps: 150
+    auth_check_ms: 8
+    position: { x: 300, y: 190 }
+  - type: load_balancer
+    id: service-lb
+    label: Service Load Balancer
+    strategy: round_robin
+    position: { x: 540, y: 190 }
+  - type: service
+    id: users-service
+    label: Users Service
+    latency_ms: 30
+    capacity_rps: 70
+    error_rate: 0.005
+    position: { x: 780, y: 70 }
+  - type: service
+    id: orders-service
+    label: Orders Service
+    latency_ms: 45
+    capacity_rps: 65
+    error_rate: 0.01
+    position: { x: 780, y: 190 }
+  - type: service
+    id: search-service
+    label: Search Service
+    latency_ms: 55
+    capacity_rps: 90
+    error_rate: 0.008
+    position: { x: 780, y: 310 }
+  - type: cache
+    id: shared-cache
+    label: Shared Redis Cache
+    hit_rate: 0.76
+    latency_ms: 2
+    position: { x: 1040, y: 120 }
+  - type: database
+    id: api-db
+    label: Shared Database
+    pool_size: 32
+    query_latency_ms: 14
+    timeout_ms: 220
+    position: { x: 1040, y: 280 }
+edges:
+  - id: users-to-gateway
+    source: public-users
+    target: api-gateway
+    kind: sync
+    latency_ms: 8
+  - id: gateway-to-lb
+    source: api-gateway
+    target: service-lb
+    kind: sync
+    latency_ms: 2
+  - id: lb-to-users
+    source: service-lb
+    target: users-service
+    kind: sync
+    latency_ms: 3
+    weight: 1
+    tags: [scenario:profile]
+  - id: lb-to-orders
+    source: service-lb
+    target: orders-service
+    kind: sync
+    latency_ms: 4
+    weight: 2
+    tags: [scenario:orders]
+  - id: lb-to-search
+    source: service-lb
+    target: search-service
+    kind: sync
+    latency_ms: 5
+    weight: 3
+    tags: [scenario:search]
+  - id: users-to-cache
+    source: users-service
+    target: shared-cache
+    kind: sync
+    latency_ms: 1
+    tags: [tag:hit]
+  - id: orders-to-cache
+    source: orders-service
+    target: shared-cache
+    kind: sync
+    latency_ms: 1
+    tags: [tag:hit]
+  - id: search-to-cache
+    source: search-service
+    target: shared-cache
+    kind: sync
+    latency_ms: 1
+    tags: [tag:hit]
+  - id: cache-to-db
+    source: shared-cache
+    target: api-db
+    kind: sync
+    latency_ms: 10
+    tags: [tag:miss]
+scenarios:
+  - id: profile
+    origin: public-users
+    color: "#a78bfa"
+    weight: 1
+  - id: orders
+    origin: public-users
+    color: "#38bdf8"
+    weight: 2
+  - id: search
+    origin: public-users
+    color: "#22c55e"
+    weight: 3
