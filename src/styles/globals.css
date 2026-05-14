@@ -1,0 +1,44 @@
+:root {
+  --bg: #0f1117;
+  --bg-elev: #161922;
+  --panel: #1f2330;
+  --border: #2a2f3a;
+  --text: #f5f6fa;
+  --text-dim: #8a8f9c;
+  --accent: #4ade80;
+  --info: #60a5fa;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --client: #4ade80;
+  --service: #fbbf24;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
