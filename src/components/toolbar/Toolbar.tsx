@@ -1,6 +1,13 @@
 import { useEngineStore } from "@/store/engineStore";
 
-export function Toolbar() {
+export type ViewMode = "canvas" | "split" | "editor";
+
+interface ToolbarProps {
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
+}
+
+export function Toolbar({ viewMode, onViewModeChange }: ToolbarProps) {
   const isRunning = useEngineStore((s) => s.isRunning);
   const seed = useEngineStore((s) => s.seed);
   const play = useEngineStore((s) => s.play);
@@ -32,6 +39,7 @@ export function Toolbar() {
         {isRunning ? "⏸ Pause" : "▶ Play"}
       </button>
       <button onClick={reset} style={btnStyle("var(--border)")}>⟲ Reset</button>
+      <button onClick={() => onViewModeChange(nextViewMode(viewMode))} style={btnStyle("var(--info)")}>Editor: {viewMode}</button>
       <label style={{ color: "var(--text-dim)" }}>
         seed:&nbsp;
         <input
@@ -54,6 +62,12 @@ export function Toolbar() {
       </div>
     </div>
   );
+}
+
+function nextViewMode(mode: ViewMode): ViewMode {
+  if (mode === "canvas") return "split";
+  if (mode === "split") return "editor";
+  return "canvas";
 }
 
 function btnStyle(color: string): React.CSSProperties {
