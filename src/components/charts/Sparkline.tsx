@@ -28,8 +28,7 @@ export function Sparkline({ values, color = '#4caf50', height = 48, width = 200,
         { stroke: color, width: 1.5, points: { show: false } },
       ],
     };
-    const xs = values.map((_, i) => i);
-    plotRef.current = new uPlot(opts, [xs, values], ref.current);
+    plotRef.current = new uPlot(opts, [[], []], ref.current);
     return () => { plotRef.current?.destroy(); plotRef.current = null; };
   }, [width, height, color]);
 
