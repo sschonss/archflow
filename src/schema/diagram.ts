@@ -1,5 +1,21 @@
 import { z } from "zod";
 
+export const TriggerSchema = z.object({
+  id: z.string().min(1),
+  cron: z.string().min(1),
+  payload_size: z.number().int().nonnegative().optional(),
+});
+export type Trigger = z.infer<typeof TriggerSchema>;
+
+export const ScenarioSchema = z.object({
+  id: z.string().min(1),
+  origin: z.string().min(1),
+  trigger_id: z.string().optional(),
+  color: z.string().optional(),
+  weight: z.number().positive().default(1),
+});
+export type Scenario = z.infer<typeof ScenarioSchema>;
+
 export const ClientNodeSchema = z.object({
   type: z.literal("client"),
   id: z.string().min(1),
@@ -17,6 +33,7 @@ export const ServiceNodeSchema = z.object({
   latency_ms: z.number().nonnegative().default(20),
   capacity_rps: z.number().positive().default(1000),
   error_rate: z.number().min(0).max(1).default(0),
+  triggers: z.array(TriggerSchema).optional(),
   position: z.object({ x: z.number(), y: z.number() }).optional(),
 });
 
@@ -33,6 +50,7 @@ export const EdgeSchema = z.object({
   latency_ms: z.number().nonnegative().default(5),
   label: z.string().optional(),
   weight: z.number().positive().default(1),
+  tags: z.array(z.string()).optional(),
 });
 
 export const DiagramSchema = z
@@ -40,6 +58,7 @@ export const DiagramSchema = z
     version: z.literal(1),
     nodes: z.array(NodeSchema),
     edges: z.array(EdgeSchema),
+    scenarios: z.array(ScenarioSchema).optional(),
   })
   .superRefine((diagram, ctx) => {
     const ids = new Set(diagram.nodes.map((n) => n.id));
