@@ -8,14 +8,21 @@ import { useEngineStore } from "./store/engineStore";
 import { parseDiagram } from "./lib/yaml";
 import demoYaml from "./examples/foundation-demo.archflow.yaml?raw";
 import ecommerceYaml from "./examples/ecommerce.archflow.yaml?raw";
+import scalingYaml from "./examples/scaling.yaml?raw";
+
+type ExampleName = "foundation" | "ecommerce" | "scaling";
 
 export default function App() {
-  const [example, setExample] = useState<"foundation" | "ecommerce">("foundation");
+  const [example, setExample] = useState<ExampleName>("foundation");
   const loadDiagram = useEngineStore((s) => s.loadDiagram);
 
   useEffect(() => {
-    const yaml = example === "foundation" ? demoYaml : ecommerceYaml;
-    loadDiagram(parseDiagram(yaml));
+    const yamlByExample: Record<ExampleName, string> = {
+      foundation: demoYaml,
+      ecommerce: ecommerceYaml,
+      scaling: scalingYaml,
+    };
+    loadDiagram(parseDiagram(yamlByExample[example]));
   }, [loadDiagram, example]);
 
   return (
@@ -34,8 +41,8 @@ function PaletteStub({
   example,
   onExampleChange,
 }: {
-  example: "foundation" | "ecommerce";
-  onExampleChange: (ex: "foundation" | "ecommerce") => void;
+  example: ExampleName;
+  onExampleChange: (ex: ExampleName) => void;
 }) {
   return (
     <>
@@ -45,7 +52,7 @@ function PaletteStub({
         </div>
         <select
           value={example}
-          onChange={(e) => onExampleChange(e.target.value as "foundation" | "ecommerce")}
+          onChange={(e) => onExampleChange(e.target.value as ExampleName)}
           style={{
             width: "100%",
             padding: "6px 8px",
@@ -58,6 +65,7 @@ function PaletteStub({
         >
           <option value="foundation">Foundation Demo</option>
           <option value="ecommerce">E-commerce Catalog</option>
+          <option value="scaling">Scaling HPA Demo</option>
         </select>
       </div>
       <div style={{ textTransform: "uppercase", color: "var(--text-dim)", fontSize: 11 }}>

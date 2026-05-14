@@ -1,0 +1,38 @@
+# archflow Scaling demo — high-RPS client drives HPA scale-out for a service inside a cluster.
+version: 1
+nodes:
+  - type: cluster
+    id: cluster-prod
+    label: Production
+    members: [api]
+    position: { x: 260, y: 80 }
+  - type: client
+    id: users
+    label: Users
+    rps: 240
+    pattern: ramp
+    position: { x: 80, y: 180 }
+  - type: service
+    id: api
+    label: API
+    latency_ms: 50
+    capacity_rps: 80
+    error_rate: 0
+    resources:
+      cpu_per_request_ms: 50
+      mem_per_request_mb: 2
+      cpu_limit_ms_per_sec: 1000
+      mem_limit_mb: 512
+    hpa:
+      min_replicas: 1
+      max_replicas: 6
+      target_cpu: 60
+      cooldown_ticks: 5
+    position: { x: 330, y: 170 }
+edges:
+  - id: e-users-api
+    source: users
+    target: api
+    kind: sync
+    latency_ms: 5
+    weight: 1
