@@ -34,6 +34,7 @@ export interface NodeRuntime {
   cpu_utilization?: number;
   mem_utilization?: number;
   hpaWindow?: number[];
+  hpaCooldownTicks?: number;
   // worker
   workersBusy?: number;
   // gateway
