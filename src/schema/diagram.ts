@@ -35,12 +35,21 @@ export const ResourcesSchema = z.object({
 export type Resources = z.infer<typeof ResourcesSchema>;
 
 export const HpaSchema = z
-  .object({
+  .preprocess((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+    const hpa = value as Record<string, unknown>;
+    return {
+      ...hpa,
+      target_cpu_pct: hpa.target_cpu_pct ?? hpa.target_cpu,
+      stabilization_ticks: hpa.stabilization_ticks ?? hpa.cooldown_ticks,
+    };
+  },
+  z.object({
     min_replicas: z.number().int().positive(),
     max_replicas: z.number().int().positive(),
     target_cpu_pct: z.number().min(1).max(100),
     stabilization_ticks: z.number().int().positive().default(5),
-  })
+  }))
   .refine((h) => h.min_replicas <= h.max_replicas, {
     message: 'min_replicas must be <= max_replicas',
   });
