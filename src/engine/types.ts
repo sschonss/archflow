@@ -1,47 +1,68 @@
-import type { Diagram, Node, Edge } from "@/schema";
+import type { Diagram, Node, Edge, Scenario } from "@/schema";
+
+export type FailureReason = "429" | "503" | "timeout" | "queue_overflow" | "oom";
 
 export type ParticleStatus =
   | "in_flight"
   | "processing"
+  | "queued"
   | "completed"
   | "failed";
 
 export interface Particle {
-  id: string;
-  scenarioId: string | null;
-  originNodeId: string;
+  id: number;
   originType: "http" | "webhook" | "cron";
-  /** Either a node id (when processing) or an edge id (when in flight). */
+  scenarioId?: string;
+  bornAt: number;
+  enqueuedAt?: number;
   location:
     | { kind: "node"; id: string }
-    | { kind: "edge"; id: string; progress: number /* 0..1 */ };
-  birthTimeMs: number;
-  latencySoFarMs: number;
+    | { kind: "edge"; id: string; progress: number };
   status: ParticleStatus;
-  failureReason?: string;
+  failureReason?: FailureReason;
 }
 
 export interface NodeRuntime {
-  nodeId: string;
-  /** Time-domain accumulator for emission scheduling (Client only in v1). */
-  emitAccumulatorMs: number;
-  /** In-flight particles being processed by this node. */
-  inFlight: Particle[];
+  // shared
+  inFlight: number;
+  // client / webhook
+  emitAccumulatorMs?: number;
+  // service / worker
+  busyUntilMs?: number;
+  // worker
+  workersBusy?: number;
+  // gateway
+  tokens?: number;
+  lastRefillMs?: number;
+  // queue
+  queue?: number[];
+  // load_balancer
+  rrCursor?: number;
+  // database
+  poolUsed?: number;
+  waiters?: { particleId: number; deadlineMs: number }[];
+  // cron
+  cronNextMs?: Record<string, number>;
+}
+
+export interface MetricsWindow {
+  emits: number[];
+  completes: number[];
+  fails: number[];
+  latencies: { t: number; ms: number }[];
+  queueDepth: { t: number; n: number }[];
 }
 
 export interface EngineState {
   diagram: Diagram;
   seed: number;
   rngState: number;
-  /** Simulation time in ms since start. */
   nowMs: number;
-  /** All particles currently alive. */
   particles: Particle[];
-  /** Per-node runtime state (keyed by node id). */
   nodes: Record<string, NodeRuntime>;
-  /** Counters since `reset`. */
+  metrics: Record<string, MetricsWindow>;
+  scenarios: Scenario[];
   counters: { emitted: number; completed: number; failed: number };
-  /** Monotonic id generator for particles. */
   nextParticleId: number;
 }
 

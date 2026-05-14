@@ -1,5 +1,5 @@
 import type { ClientNode } from "@/schema";
-import type { EngineState, NodeRuntime, Particle } from "@/engine/types";
+import type { EngineState, Particle } from "@/engine/types";
 
 /**
  * Emit particles from a Client node. Uses a time-domain accumulator so that
@@ -19,25 +19,23 @@ export function tickClient(
   if (!rt) return;
 
   const particlesPerMs = client.rps / 1000;
-  rt.emitAccumulatorMs += particlesPerMs * dtMs;
+  rt.emitAccumulatorMs = (rt.emitAccumulatorMs ?? 0) + particlesPerMs * dtMs;
 
-  const toEmit = Math.round(rt.emitAccumulatorMs);
+  const toEmit = Math.round(rt.emitAccumulatorMs ?? 0);
   for (let i = 0; i < toEmit; i++) {
-    emitOne(state, client, rt);
+    emitOne(state, client);
   }
-  rt.emitAccumulatorMs -= toEmit;
+  rt.emitAccumulatorMs = (rt.emitAccumulatorMs ?? 0) - toEmit;
 }
 
-function emitOne(state: EngineState, client: ClientNode, _rt: NodeRuntime): void {
-  const id = `p${state.nextParticleId++}`;
+function emitOne(state: EngineState, client: ClientNode): void {
+  const id = state.nextParticleId++;
   const particle: Particle = {
     id,
-    scenarioId: null,
-    originNodeId: client.id,
     originType: "http",
+    scenarioId: undefined,
+    bornAt: state.nowMs,
     location: { kind: "node", id: client.id },
-    birthTimeMs: state.nowMs,
-    latencySoFarMs: 0,
     status: "in_flight",
   };
   state.particles.push(particle);

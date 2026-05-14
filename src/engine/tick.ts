@@ -1,5 +1,5 @@
 import { mulberry32 } from "./rng";
-import type { EngineState, Particle } from "./types";
+import type { EngineState } from "./types";
 import { getNode, getEdge, outgoingEdges } from "./types";
 import { tickClient } from "./nodes/client";
 import { tickService } from "./nodes/service";
@@ -33,13 +33,12 @@ function advanceEdges(state: EngineState, dtMs: number): void {
     if (!edge) continue;
     const stepProgress = edge.latency_ms === 0 ? 1 : dtMs / edge.latency_ms;
     p.location.progress += stepProgress;
-    p.latencySoFarMs += dtMs;
     if (p.location.progress >= 1) {
       const target = getNode(state, edge.target);
       if (!target) continue;
       p.location = { kind: "node", id: target.id };
       const rt = state.nodes[target.id];
-      if (rt) rt.inFlight.push(p);
+      if (rt) rt.inFlight += 1;
     }
   }
 }

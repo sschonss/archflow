@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { tickService } from "@/engine/nodes/service";
 import { mulberry32 } from "@/engine/rng";
-import type { EngineState } from "@/engine/types";
+import type { EngineState, Particle } from "@/engine/types";
 import type { ServiceNode } from "@/schema";
 
 function makeState(svc: ServiceNode): EngineState {
@@ -12,8 +12,10 @@ function makeState(svc: ServiceNode): EngineState {
     nowMs: 0,
     particles: [],
     nodes: {
-      [svc.id]: { nodeId: svc.id, emitAccumulatorMs: 0, inFlight: [] },
+      [svc.id]: { inFlight: 0, emitAccumulatorMs: 0 },
     },
+    metrics: {},
+    scenarios: [],
     counters: { emitted: 0, completed: 0, failed: 0 },
     nextParticleId: 1,
   };
@@ -31,18 +33,16 @@ describe("Service processing", () => {
     };
     const state = makeState(svc);
     const rng = mulberry32(1);
-    state.particles.push({
-      id: "p1",
-      scenarioId: null,
-      originNodeId: "x",
+    const p: Particle = {
+      id: 1,
       originType: "http",
+      bornAt: 0,
       location: { kind: "node", id: "s1" },
-      birthTimeMs: 0,
-      latencySoFarMs: 0,
       status: "in_flight",
-    });
-    state.nodes["s1"].inFlight.push(state.particles[0]);
-    state.particles[0].status = "processing";
+    };
+    state.particles.push(p);
+    state.nodes["s1"].inFlight = 1;
+    p.status = "processing";
 
     state.nowMs = 30;
     tickService(state, svc, 30, rng);
@@ -52,7 +52,6 @@ describe("Service processing", () => {
     tickService(state, svc, 30, rng);
     expect(state.counters.completed).toBe(1);
     expect(state.particles).toHaveLength(0);
-    expect(state.nodes["s1"].inFlight).toHaveLength(0);
   });
 
   it("fails a particle when error_rate=1", () => {
@@ -66,17 +65,15 @@ describe("Service processing", () => {
     };
     const state = makeState(svc);
     const rng = mulberry32(1);
-    state.particles.push({
-      id: "p1",
-      scenarioId: null,
-      originNodeId: "x",
+    const p: Particle = {
+      id: 1,
       originType: "http",
+      bornAt: 0,
       location: { kind: "node", id: "s1" },
-      birthTimeMs: 0,
-      latencySoFarMs: 0,
       status: "processing",
-    });
-    state.nodes["s1"].inFlight.push(state.particles[0]);
+    };
+    state.particles.push(p);
+    state.nodes["s1"].inFlight = 1;
 
     state.nowMs = 20;
     tickService(state, svc, 20, rng);

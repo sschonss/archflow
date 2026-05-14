@@ -1,18 +1,19 @@
 import { describe, it, expect } from "vitest";
 import { tickClient } from "@/engine/nodes/client";
 import { mulberry32 } from "@/engine/rng";
-import type { EngineState, NodeRuntime } from "@/engine/types";
+import type { EngineState } from "@/engine/types";
 import type { ClientNode } from "@/schema";
 
 function makeState(client: ClientNode): EngineState {
-  const rt: NodeRuntime = { nodeId: client.id, emitAccumulatorMs: 0, inFlight: [] };
   return {
     diagram: { version: 1, nodes: [client], edges: [] },
     seed: 1,
     rngState: 1,
     nowMs: 0,
     particles: [],
-    nodes: { [client.id]: rt },
+    nodes: { [client.id]: { inFlight: 0, emitAccumulatorMs: 0 } },
+    metrics: {},
+    scenarios: [],
     counters: { emitted: 0, completed: 0, failed: 0 },
     nextParticleId: 1,
   };
@@ -37,7 +38,6 @@ describe("Client emission", () => {
     expect(state.counters.emitted).toBe(10);
     expect(state.particles).toHaveLength(10);
     state.particles.forEach((p) => {
-      expect(p.originNodeId).toBe("c1");
       expect(p.originType).toBe("http");
       expect(p.location).toEqual({ kind: "node", id: "c1" });
       expect(p.status).toBe("in_flight");

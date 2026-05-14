@@ -23,7 +23,7 @@ export function createEngine(diagram: Diagram, seed: number): EngineApi {
 function buildInitial(diagram: Diagram, seed: number): EngineState {
   const nodes: Record<string, NodeRuntime> = {};
   for (const n of diagram.nodes) {
-    nodes[n.id] = { nodeId: n.id, emitAccumulatorMs: 0, inFlight: [] };
+    nodes[n.id] = { inFlight: 0, emitAccumulatorMs: 0 };
   }
   return {
     diagram,
@@ -32,6 +32,8 @@ function buildInitial(diagram: Diagram, seed: number): EngineState {
     nowMs: 0,
     particles: [],
     nodes,
+    metrics: {},
+    scenarios: diagram.scenarios ?? [],
     counters: { emitted: 0, completed: 0, failed: 0 },
     nextParticleId: 1,
   };
