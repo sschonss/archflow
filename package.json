@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "lint": "eslint . --ext .ts,.tsx",
     "schema:gen": "tsx scripts/gen-schema.ts",
+    "llms:gen": "tsx scripts/gen-llms-full.ts",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\" \"tests/**/*.ts\""
   },
   "dependencies": {

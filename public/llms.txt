@@ -1,0 +1,24 @@
+# archflow
+
+> Interactive architecture diagrams with simulated request flows.
+
+archflow is an open-source SPA where users design system architecture (services, gateways, queues, caches, databases, workers) in YAML and watch simulated requests flow through the components in real time, with metrics and Kubernetes-style HPA scaling.
+
+## Docs
+
+- [README](https://github.com/<owner>/archflow#readme)
+- [Cookbook](https://github.com/<owner>/archflow/tree/master/docs/cookbook)
+- [JSON Schema](https://example.com/archflow/schema/archflow.schema.json)
+- [LLM prompt](https://github.com/<owner>/archflow/blob/master/docs/llm-prompt.md)
+
+## Examples
+
+- [01 e-commerce](https://github.com/<owner>/archflow/blob/master/src/examples/01-ecommerce.yaml)
+- [02 microservices async](https://github.com/<owner>/archflow/blob/master/src/examples/02-microservices-async.yaml)
+- [03 API gateway](https://github.com/<owner>/archflow/blob/master/src/examples/03-api-gateway.yaml)
+- [04 Kubernetes autoscaling](https://github.com/<owner>/archflow/blob/master/src/examples/04-k8s-autoscaling.yaml)
+- [05 event driven](https://github.com/<owner>/archflow/blob/master/src/examples/05-event-driven.yaml)
+
+## Optional
+
+- [llms-full.txt](https://example.com/archflow/llms-full.txt)
