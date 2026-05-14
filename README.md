@@ -62,7 +62,6 @@ archflow/
 │   ├── schema/       # Zod diagram schema and node catalog
 │   ├── lib/          # YAML, export, and utility helpers
 │   └── examples/     # Demo and cookbook YAML diagrams
-├── mcp-server/       # Model Context Protocol server
 ├── scripts/          # Schema and LLM artifact generators
 └── public/
     └── schema/       # Published JSON Schema
@@ -76,7 +75,7 @@ archflow/
 
 ## MCP server
 
-Agent and editor integrations can use the planned MCP server documented in [mcp-server/README.md](mcp-server/README.md).
+An MCP (Model Context Protocol) server is on the roadmap; for now agents can consume `llms.txt`, `llm-prompt.md` and the published JSON Schema directly.
 
 ## Development
 

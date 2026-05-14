@@ -1,6 +1,6 @@
 {
   "name": "archflow",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "Open-source interactive architecture diagrams with simulated request flows.",
