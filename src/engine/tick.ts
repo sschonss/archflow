@@ -7,7 +7,7 @@ import { tickWebhook } from "./nodes/webhook";
 import { pickBackend } from "./nodes/loadbalancer";
 import { admitGateway } from "./nodes/gateway";
 import { enqueue, dequeue, queueDepth } from "./nodes/queue";
-import { canPick, startProcessing, finishProcessing, finishedAt } from "./nodes/worker";
+import { canPick, startProcessing, finishProcessing } from "./nodes/worker";
 import { cacheLookup } from "./nodes/cache";
 import { acquireConn, expireWaiters, releaseConn } from "./nodes/database";
 import { chooseEdge } from "./routing";
@@ -85,6 +85,18 @@ function dispatchNode(
 ): void {
   const rt = state.nodes[node.id];
   if (!rt) return;
+
+  if (rt.chaos?.killed) {
+    for (const p of particlesAt(state, node.id)) {
+      if (p.status !== "failed" && p.status !== "completed") {
+        failParticle(state, node.id, p, "unavailable");
+      }
+    }
+    resetKilledRuntime(rt);
+    return;
+  }
+
+  dropArrivalsForChaos(state, node.id, rt, rng);
 
   switch (node.type) {
     case "client":
@@ -191,7 +203,7 @@ function processLoadBalancer(
   rt: NodeRuntime,
   rng: () => number,
 ): void {
-  const outEdges = outgoingEdges(state, node.id);
+  const outEdges = availableOutgoingEdges(state, node.id);
   const edgeIds = outEdges.map((e) => e.id);
   if (edgeIds.length === 0) return;
 
@@ -221,7 +233,7 @@ function processService(
       jobs.set(p.id, {
         nodeId: node.id,
         startedAtMs: state.nowMs,
-        busyUntilMs: state.nowMs + node.latency_ms,
+        busyUntilMs: state.nowMs + latencyWithChaos(node.latency_ms, state.nodes[node.id]),
       });
     }
     p.status = "processing";
@@ -286,7 +298,7 @@ function startWorkerParticlesAtNode(
     jobs.set(p.id, {
       nodeId: node.id,
       startedAtMs: state.nowMs,
-      busyUntilMs: finishedAt(node, state.nowMs),
+      busyUntilMs: state.nowMs + latencyWithChaos(node.latency_ms, rt),
     });
   }
 }
@@ -318,7 +330,7 @@ function pullFromUpstreamQueues(
       jobs.set(p.id, {
         nodeId: node.id,
         startedAtMs: state.nowMs,
-        busyUntilMs: finishedAt(node, state.nowMs),
+        busyUntilMs: state.nowMs + latencyWithChaos(node.latency_ms, rt),
       });
     }
   }
@@ -355,7 +367,7 @@ function processCache(
       jobs.set(p.id, {
         nodeId: node.id,
         startedAtMs: state.nowMs,
-        busyUntilMs: state.nowMs + lookup.latencyMs,
+        busyUntilMs: state.nowMs + latencyWithChaos(lookup.latencyMs, state.nodes[node.id]),
         hit: lookup.hit,
       });
       p.status = "processing";
@@ -369,7 +381,7 @@ function processCache(
     jobs.delete(particleId);
     if (!p || p.location.kind !== "node" || p.location.id !== node.id) continue;
 
-    const edge = pickCacheEdge(outgoingEdges(state, node.id), job.hit);
+    const edge = pickCacheEdge(availableOutgoingEdges(state, node.id), job.hit);
     if (edge) {
       p.location = { kind: "edge", id: edge.id, progress: 0 };
       p.status = "in_flight";
@@ -401,7 +413,7 @@ function processDatabase(
       jobs.set(p.id, {
         nodeId: node.id,
         startedAtMs: state.nowMs,
-        busyUntilMs: state.nowMs + node.query_latency_ms,
+        busyUntilMs: state.nowMs + latencyWithChaos(node.query_latency_ms, rt),
       });
     }
   }
@@ -424,7 +436,7 @@ function processDatabase(
         jobs.set(promotedId, {
           nodeId: node.id,
           startedAtMs: state.nowMs,
-          busyUntilMs: state.nowMs + node.query_latency_ms,
+          busyUntilMs: state.nowMs + latencyWithChaos(node.query_latency_ms, rt),
         });
       }
     }
@@ -437,9 +449,13 @@ function routeOrComplete(
   p: Particle,
   rng: () => number,
 ): void {
-  const edge = chooseEdge(outgoingEdges(state, nodeId), p.scenarioId, rng);
+  const edge = chooseAvailableEdge(state, nodeId, p.scenarioId, rng);
   if (!edge) {
-    completeParticle(state, nodeId, p);
+    if (outgoingEdges(state, nodeId).length > 0) {
+      failParticle(state, nodeId, p, "unavailable");
+    } else {
+      completeParticle(state, nodeId, p);
+    }
     return;
   }
   p.location = { kind: "edge", id: edge.id, progress: 0 };
@@ -453,8 +469,11 @@ function routeParticle(
   p: Particle,
   rng: () => number,
 ): void {
-  const edge = chooseEdge(outgoingEdges(state, nodeId), p.scenarioId, rng);
-  if (!edge) return;
+  const edge = chooseAvailableEdge(state, nodeId, p.scenarioId, rng);
+  if (!edge) {
+    if (outgoingEdges(state, nodeId).length > 0) failParticle(state, nodeId, p, "unavailable");
+    return;
+  }
   p.location = { kind: "edge", id: edge.id, progress: 0 };
   p.status = "in_flight";
   decrementInFlight(state, nodeId);
@@ -477,6 +496,49 @@ function failParticle(
   state.counters.failed += 1;
   recordFail(metricsFor(state, nodeId), state.nowMs);
   decrementInFlight(state, nodeId);
+}
+
+function dropArrivalsForChaos(
+  state: EngineState,
+  nodeId: string,
+  rt: NodeRuntime,
+  rng: () => number,
+): void {
+  const fraction = rt.chaos?.drop_fraction;
+  if (!fraction || fraction <= 0) return;
+
+  for (const p of particlesAt(state, nodeId)) {
+    if (p.status === "in_flight" && rng() < fraction) {
+      failParticle(state, nodeId, p, "dropped");
+    }
+  }
+}
+
+function latencyWithChaos(latencyMs: number, rt: NodeRuntime | undefined): number {
+  const factor = rt?.chaos?.slow_factor;
+  return latencyMs * (factor && factor > 0 ? factor : 1);
+}
+
+function resetKilledRuntime(rt: NodeRuntime): void {
+  rt.workersBusy = 0;
+  rt.poolUsed = 0;
+  rt.waiters = [];
+  rt.queue = [];
+}
+
+function chooseAvailableEdge(
+  state: EngineState,
+  nodeId: string,
+  scenarioId: string | undefined,
+  rng: () => number,
+): Edge | undefined {
+  return chooseEdge(availableOutgoingEdges(state, nodeId), scenarioId, rng);
+}
+
+function availableOutgoingEdges(state: EngineState, nodeId: string): Edge[] {
+  return outgoingEdges(state, nodeId).filter(
+    (edge) => !state.nodes[edge.target]?.chaos?.killed,
+  );
 }
 
 function chooseScenario(

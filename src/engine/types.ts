@@ -1,6 +1,13 @@
 import type { Diagram, Node, Edge, Scenario } from "@/schema";
 
-export type FailureReason = "429" | "503" | "timeout" | "queue_overflow" | "oom";
+export type FailureReason =
+  | "429"
+  | "503"
+  | "timeout"
+  | "queue_overflow"
+  | "oom"
+  | "unavailable"
+  | "dropped";
 
 export type ParticleStatus =
   | "in_flight"
@@ -25,6 +32,7 @@ export interface Particle {
 export interface NodeRuntime {
   // shared
   inFlight: number;
+  chaos?: { killed?: boolean; slow_factor?: number; drop_fraction?: number };
   // client / webhook
   emitAccumulatorMs?: number;
   // service / worker
