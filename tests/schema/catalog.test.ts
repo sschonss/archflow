@@ -43,3 +43,86 @@ describe('schema catalog extensions', () => {
     expect(r.success).toBe(true);
   });
 });
+
+const baseDiag = (extraNodes: unknown[]) => ({
+  version: 1,
+  nodes: [
+    { id: 'c', type: 'client', label: 'C', rps: 1, pattern: 'constant' },
+    ...extraNodes,
+  ],
+  edges: [],
+});
+
+describe('catalog node kinds', () => {
+  it('webhook', () => {
+    expect(
+      DiagramSchema.safeParse(
+        baseDiag([{ id: 'w', type: 'webhook', label: 'W', rps: 2, pattern: 'poisson' }]),
+      ).success,
+    ).toBe(true);
+  });
+
+  it('load_balancer', () => {
+    expect(
+      DiagramSchema.safeParse(
+        baseDiag([{ id: 'lb', type: 'load_balancer', label: 'LB', strategy: 'round_robin' }]),
+      ).success,
+    ).toBe(true);
+  });
+
+  it('gateway', () => {
+    expect(
+      DiagramSchema.safeParse(
+        baseDiag([
+          { id: 'g', type: 'gateway', label: 'G', rate_limit_rps: 50, auth_check_ms: 2 },
+        ]),
+      ).success,
+    ).toBe(true);
+  });
+
+  it('worker', () => {
+    expect(
+      DiagramSchema.safeParse(
+        baseDiag([
+          { id: 'wk', type: 'worker', label: 'WK', concurrency: 4, latency_ms: 20, error_rate: 0 },
+        ]),
+      ).success,
+    ).toBe(true);
+  });
+
+  it('queue', () => {
+    expect(
+      DiagramSchema.safeParse(
+        baseDiag([
+          { id: 'q', type: 'queue', label: 'Q', max_depth: 1000, on_overflow: 'drop' },
+        ]),
+      ).success,
+    ).toBe(true);
+  });
+
+  it('cache', () => {
+    expect(
+      DiagramSchema.safeParse(
+        baseDiag([{ id: 'r', type: 'cache', label: 'R', hit_rate: 0.8, latency_ms: 1 }]),
+      ).success,
+    ).toBe(true);
+  });
+
+  it('database', () => {
+    expect(
+      DiagramSchema.safeParse(
+        baseDiag([
+          {
+            id: 'db',
+            type: 'database',
+            label: 'DB',
+            pool_size: 20,
+            query_latency_ms: 5,
+            timeout_ms: 100,
+          },
+        ]),
+      ).success,
+    ).toBe(true);
+  });
+});
+

@@ -20,15 +20,20 @@ export function FlowCanvas() {
 
   const { nodes, edges } = useMemo<{ nodes: RFNode[]; edges: RFEdge[] }>(() => {
     if (!diagram) return { nodes: [], edges: [] };
-    const nodes: RFNode[] = diagram.nodes.map((n) => ({
-      id: n.id,
-      type: n.type,
-      position: n.position ?? { x: 0, y: 0 },
-      data:
-        n.type === "client"
-          ? { label: n.label, rps: n.rps }
-          : { label: n.label, latency_ms: n.latency_ms },
-    }));
+    const nodes: RFNode[] = diagram.nodes.map((n) => {
+      let data: Record<string, unknown> = { label: n.label };
+      if (n.type === "client" || n.type === "webhook") {
+        data = { ...data, rps: n.rps };
+      } else if (n.type === "service" || n.type === "worker" || n.type === "cache" || n.type === "database") {
+        data = { ...data, latency_ms: ("latency_ms" in n ? n.latency_ms : undefined) };
+      }
+      return {
+        id: n.id,
+        type: n.type,
+        position: n.position ?? { x: 0, y: 0 },
+        data,
+      };
+    });
     const edges: RFEdge[] = diagram.edges.map((e) => ({
       id: e.id,
       source: e.source,
